@@ -10,7 +10,7 @@ export default function PublicLayout({
 }) {
     return (
         <>
-            <AppBar position="static">
+            <AppBar position="sticky">
                 <Toolbar>
                     <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
                         Portal de Noticias

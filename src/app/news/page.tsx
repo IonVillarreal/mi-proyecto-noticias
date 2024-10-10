@@ -19,8 +19,11 @@ interface News {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-async function getNews(): Promise<News[]> {
-    const res = await fetch(`${API_URL}/news`, {cache: 'no-store'});
+async function getNews(): Promise<{
+    news: News[];
+    totalCount: number;
+}> {
+    const res = await fetch(`${API_URL}/news`);
     if (!res.ok) {
         throw new Error('Failed to fetch news');
     }
@@ -28,7 +31,7 @@ async function getNews(): Promise<News[]> {
 }
 
 export default async function NewsPage() {
-    const news = await getNews();
+    const {news} = await getNews();
 
     return (
         <Container maxWidth="lg" sx={{mt: 4, mb: 4}}>

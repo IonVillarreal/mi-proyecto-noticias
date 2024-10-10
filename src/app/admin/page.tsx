@@ -1,30 +1,27 @@
 'use client'
 
-import React, {useEffect, useState} from 'react';
+import React, {useState} from 'react';
 import {Container, Typography, Box, Button} from '@mui/material';
-import {DataGrid, GridColDef, GridRenderCellParams} from '@mui/x-data-grid';
+import {DataGrid, GridColDef, GridRenderCellParams, GridPaginationModel} from '@mui/x-data-grid';
 import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
-import {addNews, deleteNews, fetchNews, updateNews} from './services/newsService';
+import {addNews, deleteNews, fetchNews, News, NewsResponse, updateNews} from './services/newsService';
 import AddEditNewsDialog from './components/AddEditNewsDialog';
 import DeleteNewsDialog from "@/app/admin/components/DeleteNewsDialog";
 
-interface News {
-    id: number;
-    title: string;
-    description: string;
-}
-
 const Dashboard: React.FC = () => {
-
+    const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
+        page: 0,
+        pageSize: 5,
+    });
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [editingNews, setEditingNews] = useState<News | null>(null);
     const [deletingNewsId, setDeletingNewsId] = useState<number | null>(null);
 
     const queryClient = useQueryClient();
 
-    const {data: news, isLoading} = useQuery({
-        queryKey: ['news'],
-        queryFn: fetchNews,
+    const {data, isLoading} = useQuery<NewsResponse>({
+        queryKey: ['news', paginationModel.page, paginationModel.pageSize],
+        queryFn: () => fetchNews(paginationModel.page + 1, paginationModel.pageSize),
     });
 
     const addMutation = useMutation({
@@ -42,11 +39,6 @@ const Dashboard: React.FC = () => {
         onSuccess: () => queryClient.invalidateQueries({queryKey: ['news']}),
     });
 
-
-    useEffect(() => {
-        console.log(editingNews)
-    }, [editingNews])
-
     const columns: GridColDef[] = [
         {field: 'id', headerName: 'ID', width: 70},
         {field: 'title', headerName: 'Título', width: 300},
@@ -58,7 +50,7 @@ const Dashboard: React.FC = () => {
             renderCell: (params: GridRenderCellParams) => (
                 <>
                     <Button onClick={() => {
-                        setIsAddDialogOpen(true)
+                        setIsAddDialogOpen(true);
                         setEditingNews(params.row as News);
                     }}>Editar</Button>
                     <Button onClick={() => setDeletingNewsId(params.row.id as number)}>Eliminar</Button>
@@ -77,14 +69,14 @@ const Dashboard: React.FC = () => {
                     Agregar Noticia
                 </Button>
                 <DataGrid
-                    rows={news ?? []}
+                    rows={data?.news ?? []}
                     columns={columns}
-                    initialState={{
-                        pagination: {
-                            paginationModel: {pageSize: 5, page: 0},
-                        },
-                    }}
+                    paginationModel={paginationModel}
+                    onPaginationModelChange={setPaginationModel}
                     pageSizeOptions={[5, 10, 25]}
+                    pagination
+                    paginationMode="server"
+                    rowCount={data?.totalCount ?? 100}
                     loading={isLoading}
                     autoHeight
                 />
@@ -96,11 +88,13 @@ const Dashboard: React.FC = () => {
                     }}
                     news={editingNews}
                     onSubmit={(data) => {
-                        editingNews ? updateMutation.mutate(data as News) : addMutation.mutate(data)
-                    }
-                    }
+                        if (editingNews) {
+                            updateMutation.mutate(data as News);
+                        } else {
+                            addMutation.mutate(data as News);
+                        }
+                    }}
                 />}
-
                 <DeleteNewsDialog
                     open={!!deletingNewsId}
                     onClose={() => setDeletingNewsId(null)}

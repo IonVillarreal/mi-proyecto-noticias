@@ -1,14 +1,21 @@
 
-import axios from 'axios';
+import axios, {AxiosResponse} from 'axios';
 import Cookies from 'js-cookie';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export interface News {
-    id?: number;
+    id: number;
     title: string;
     description: string;
+    date: string;
 }
+
+export interface NewsResponse {
+    news: News[];
+    totalCount: number;
+}
+
 
 const api = axios.create({
     baseURL: API_URL,
@@ -17,9 +24,13 @@ const api = axios.create({
         Authorization: `Bearer ${Cookies.get('token')}`,
     },
 });
-
-export const fetchNews = async (): Promise<News[]> => {
-    const response = await api.get('/news');
+export const fetchNews = async (page: number = 1, pageSize: number = 10): Promise<NewsResponse> => {
+    const response: AxiosResponse<NewsResponse> = await api.get('/news', {
+        params: {
+            page,
+            pageSize
+        }
+    });
     return response.data;
 };
 

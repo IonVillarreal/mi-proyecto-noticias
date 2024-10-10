@@ -1,72 +1,111 @@
 'use client'
 
-import React from 'react';
-import { useAuth } from '../context/AuthContext';
-import { Container, Typography, List, ListItem, ListItemText, Button, Box, CircularProgress, Alert } from '@mui/material';
-import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
-import Cookies from 'js-cookie';
+import React, {useEffect, useState} from 'react';
+import {Container, Typography, Box, Button} from '@mui/material';
+import {DataGrid, GridColDef, GridRenderCellParams} from '@mui/x-data-grid';
+import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
+import {addNews, deleteNews, fetchNews, updateNews} from './services/newsService';
+import AddEditNewsDialog from './components/AddEditNewsDialog';
+import DeleteNewsDialog from "@/app/admin/components/DeleteNewsDialog";
 
 interface News {
     id: number;
     title: string;
+    description: string;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
-
-const fetchNews = async (): Promise<News[]> => {
-    const response = await axios.get(`${API_URL}/news`, {
-        headers: {
-            Authorization: `Bearer ${Cookies.get('token')}`
-        }
-    });
-    return response.data;
-};
-
 const Dashboard: React.FC = () => {
-    const { user } = useAuth();
 
-    const { data: news, isLoading, error } = useQuery<News[], Error>({
+    const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+    const [editingNews, setEditingNews] = useState<News | null>(null);
+    const [deletingNewsId, setDeletingNewsId] = useState<number | null>(null);
+
+    const queryClient = useQueryClient();
+
+    const {data: news, isLoading} = useQuery({
         queryKey: ['news'],
         queryFn: fetchNews,
     });
 
-    const addNews = async () => {
-        console.log('Agregar noticia');
-    };
+    const addMutation = useMutation({
+        mutationFn: addNews,
+        onSuccess: () => queryClient.invalidateQueries({queryKey: ['news']}),
+    });
 
-    const updateNews = async (id: number) => {
-        console.log('Actualizar noticia', id);
-    };
+    const updateMutation = useMutation({
+        mutationFn: updateNews,
+        onSuccess: () => queryClient.invalidateQueries({queryKey: ['news']}),
+    });
 
-    const deleteNews = async (id: number) => {
-        console.log('Eliminar noticia', id);
-    };
+    const deleteMutation = useMutation({
+        mutationFn: deleteNews,
+        onSuccess: () => queryClient.invalidateQueries({queryKey: ['news']}),
+    });
 
-    if (isLoading) return <CircularProgress />;
-    if (error) return <Alert severity="error">Error: {error.message}</Alert>;
+
+    useEffect(() => {
+        console.log(editingNews)
+    }, [editingNews])
+
+    const columns: GridColDef[] = [
+        {field: 'id', headerName: 'ID', width: 70},
+        {field: 'title', headerName: 'Título', width: 300},
+        {field: 'description', headerName: 'Contenido', width: 400},
+        {
+            field: 'actions',
+            headerName: 'Acciones',
+            width: 200,
+            renderCell: (params: GridRenderCellParams) => (
+                <>
+                    <Button onClick={() => {
+                        setIsAddDialogOpen(true)
+                        setEditingNews(params.row as News);
+                    }}>Editar</Button>
+                    <Button onClick={() => setDeletingNewsId(params.row.id as number)}>Eliminar</Button>
+                </>
+            ),
+        },
+    ];
 
     return (
-        <Container maxWidth="md">
-            <Box sx={{ my: 4 }}>
+        <Container maxWidth="lg">
+            <Box sx={{my: 4}}>
                 <Typography variant="h4" component="h1" gutterBottom>
-                    Bienvenido, {user?.username}!
+                    Dashboard de Noticias
                 </Typography>
-                <Typography variant="h5" component="h2" gutterBottom>
-                    Gestión de Noticias
-                </Typography>
-                <Button variant="contained" color="primary" onClick={addNews} sx={{ mb: 2 }}>
+                <Button variant="contained" onClick={() => setIsAddDialogOpen(true)}>
                     Agregar Noticia
                 </Button>
-                <List>
-                    {news?.map((item) => (
-                        <ListItem key={item.id} sx={{ bgcolor: 'background.paper', mb: 1, borderRadius: 1 }}>
-                            <ListItemText primary={item.title} />
-                            <Button onClick={() => updateNews(item.id)} color="info" sx={{ mr: 1 }}>Actualizar</Button>
-                            <Button onClick={() => deleteNews(item.id)} color="error">Eliminar</Button>
-                        </ListItem>
-                    ))}
-                </List>
+                <DataGrid
+                    rows={news ?? []}
+                    columns={columns}
+                    initialState={{
+                        pagination: {
+                            paginationModel: {pageSize: 5, page: 0},
+                        },
+                    }}
+                    pageSizeOptions={[5, 10, 25]}
+                    loading={isLoading}
+                    autoHeight
+                />
+                {isAddDialogOpen && <AddEditNewsDialog
+                    open={isAddDialogOpen}
+                    onClose={() => {
+                        setIsAddDialogOpen(false);
+                        setEditingNews(null);
+                    }}
+                    news={editingNews}
+                    onSubmit={(data) => {
+                        editingNews ? updateMutation.mutate(data as News) : addMutation.mutate(data)
+                    }
+                    }
+                />}
+
+                <DeleteNewsDialog
+                    open={!!deletingNewsId}
+                    onClose={() => setDeletingNewsId(null)}
+                    onConfirm={() => deletingNewsId && deleteMutation.mutate(deletingNewsId)}
+                />
             </Box>
         </Container>
     );

@@ -4,11 +4,11 @@ import {
     Typography,
     Card,
     CardContent,
-    CardMedia,
     Button
 } from '@mui/material';
 import Link from 'next/link';
-import Grid from '@mui/material/Grid2'
+import Grid from '@mui/material/Grid2';
+import Image from 'next/image';
 
 interface News {
     id: number;
@@ -44,11 +44,14 @@ export default async function NewsPage() {
                         size={{xs: 12, sm: 6, md: 4}}
                         key={item.id}>
                         <Card>
-                            <CardMedia
-                                component="img"
-                                height="140"
-                                image={item.imageUrl}
+                            <Image
+                                src={`https://picsum.photos/id/${item.id}/500/300`}
                                 alt={item.title}
+                                width={500}
+                                height={300}
+                                layout="responsive"
+                                placeholder="blur"
+                                blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=="
                             />
                             <CardContent>
                                 <Typography gutterBottom variant="h5" component="div">

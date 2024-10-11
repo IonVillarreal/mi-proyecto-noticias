@@ -1,4 +1,14 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {};
+import bundleAnalyzer from '@next/bundle-analyzer';
 
-export default nextConfig;
+const withBundleAnalyzer = bundleAnalyzer({
+    enabled: false,
+});
+
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+    images: {
+        domains: ['picsum.photos'],
+    },
+};
+
+export default withBundleAnalyzer(nextConfig);
